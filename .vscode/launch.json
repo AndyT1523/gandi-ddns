@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Gandi-DDNS",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "org.flukeydudes.gandiddns.GandiDynamicDNSApplication",
+            "projectName": "gandi-ddns",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
