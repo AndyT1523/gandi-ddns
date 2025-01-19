@@ -50,11 +50,11 @@ public class GandiDynamicDNSApplication {
 		PATH_TO_PROPERTIES = pathToProperties;
 
 		LINUX = System.getProperty("os.name").toLowerCase().contains("linux");
-		boolean useSystemd = false;
+		boolean systemd = false;
 
 		if (LINUX) {
 			try {
-				useSystemd = "systemd".equalsIgnoreCase(
+				systemd = "systemd".equalsIgnoreCase(
 						new String(new ProcessBuilder("ps", "--no-headers", "-o", "comm", "1")
 								.start()
 								.getInputStream()
@@ -62,7 +62,7 @@ public class GandiDynamicDNSApplication {
 			} catch (IOException e) {
 				logger.info("Failed to detect systemd, writing PID file.");
 			}
-			if (!useSystemd) {
+			if (!systemd) {
 				try (FileWriter writer = new FileWriter(new File(PID_FILE_PATH))) {
 					writer.write(String.valueOf(ProcessHandle.current().pid()));
 
@@ -71,7 +71,7 @@ public class GandiDynamicDNSApplication {
 				}
 			}
 		}
-		SYSTEMD = useSystemd;
+		SYSTEMD = systemd;
 	}
 
 	public static void main(String[] args) {
