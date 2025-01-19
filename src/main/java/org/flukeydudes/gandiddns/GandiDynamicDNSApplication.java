@@ -1,5 +1,7 @@
 package org.flukeydudes.gandiddns;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -30,20 +32,27 @@ import jakarta.annotation.PreDestroy;
 @EnableScheduling
 public class GandiDynamicDNSApplication {
 
-	private static final String OPERATING_SYSTEM = System.getProperty("os.name").toLowerCase();
-	private static final boolean USE_SYSTEMD;
+	private static final boolean LINUX, SYSTEMD;
+	private static final String PATH_TO_PROPERTIES;
+	private static final String PID_FILE_PATH = "/run/gandi-ddns.pid";
 	private static Logger logger = LoggerFactory.getLogger(GandiDynamicDNSApplication.class);
 	private static volatile Properties properties = new Properties();
-	private static String pathToEnv;
 
 	/**
 	 * Static block to determine if the application is running on a linux system
 	 * with systemd.
 	 */
 	static {
+		String pathToProperties = System.getenv("APP_ENV_PATH");
+		if (StringUtils.isBlank(pathToProperties)) {
+			pathToProperties = "/etc/gandi-ddns.properties";
+		}
+		PATH_TO_PROPERTIES = pathToProperties;
+
+		LINUX = System.getProperty("os.name").toLowerCase().contains("linux");
 		boolean useSystemd = false;
 
-		if (OPERATING_SYSTEM.contains("linux")) {
+		if (LINUX) {
 			try {
 				useSystemd = "systemd".equalsIgnoreCase(
 						new String(new ProcessBuilder("ps", "--no-headers", "-o", "comm", "1")
@@ -51,27 +60,30 @@ public class GandiDynamicDNSApplication {
 								.getInputStream()
 								.readAllBytes(), StandardCharsets.UTF_8).trim());
 			} catch (IOException e) {
-				// do nothing
+				logger.info("Failed to detect systemd, writing PID file.");
+			}
+			if (!useSystemd) {
+				try (FileWriter writer = new FileWriter(new File(PID_FILE_PATH))) {
+					writer.write(String.valueOf(ProcessHandle.current().pid()));
+
+				} catch (IOException e) {
+					logger.error("Failed to write PID file at {}!", PID_FILE_PATH, e);
+				}
 			}
 		}
-		USE_SYSTEMD = useSystemd;
+		SYSTEMD = useSystemd;
 	}
 
 	public static void main(String[] args) {
-
-		if (USE_SYSTEMD) {
-			logger.info("systemd detected, using sd_notify.");
+		if (LINUX && SYSTEMD) {
+			logger.info("systemd detected, using sd_notify().");
+		} else if (LINUX) {
+			logger.info("Linux detected, PID file written at {}.", PID_FILE_PATH);
 		}
 
-		pathToEnv = System.getenv("APP_ENV_PATH");
-		if (StringUtils.isBlank(pathToEnv)) {
-			pathToEnv = "/etc/gandi-ddns.properties";
-		}
 		reloadProperties();
 
 		ApplicationContext context = SpringApplication.run(GandiDynamicDNSApplication.class, args);
-
-		SystemdNotifySocket.ready();
 
 		Signal.handle(new Signal("HUP"), new SignalHandler() {
 
@@ -84,6 +96,8 @@ public class GandiDynamicDNSApplication {
 				SystemdNotifySocket.ready();
 			}
 		});
+
+		SystemdNotifySocket.ready();
 	}
 
 	@PreDestroy
@@ -96,9 +110,9 @@ public class GandiDynamicDNSApplication {
 		synchronized (properties) {
 			try {
 				properties.clear();
-				properties.load(Files.newBufferedReader(Paths.get(pathToEnv)));
+				properties.load(Files.newBufferedReader(Paths.get(PATH_TO_PROPERTIES)));
 			} catch (IOException e) {
-				logger.error("Failed to load Properties from {}. Halting!", pathToEnv, e);
+				logger.error("Failed to load Properties from {}. Halting!", PATH_TO_PROPERTIES, e);
 				System.exit(1);
 			}
 		}
@@ -120,7 +134,7 @@ public class GandiDynamicDNSApplication {
 		}
 
 		public static void ready() {
-			if (USE_SYSTEMD) {
+			if (SYSTEMD) {
 				int result = LibSystemd.INSTANCE.sd_notify(0, "READY=1");
 				if (result < 0) {
 					throw new RuntimeException(
@@ -130,7 +144,7 @@ public class GandiDynamicDNSApplication {
 		}
 
 		public static void reloading() {
-			if (USE_SYSTEMD) {
+			if (SYSTEMD) {
 				int result = LibSystemd.INSTANCE.sd_notify(0,
 						"RELOADING=1\nMONOTONIC_USEC=" + (System.nanoTime() / 1000));
 				if (result < 0) {
@@ -141,7 +155,7 @@ public class GandiDynamicDNSApplication {
 		}
 
 		public static void stopping() {
-			if (USE_SYSTEMD) {
+			if (SYSTEMD) {
 				int result = LibSystemd.INSTANCE.sd_notify(0, "STOPPING=1");
 				if (result < 0) {
 					throw new RuntimeException(

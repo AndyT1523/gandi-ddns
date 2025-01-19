@@ -21,9 +21,14 @@ The IPs are compared on a schedule set to the TTL of the domain.
 
 The domain IP is cached and used for two checks then re-resolved to prevent an infinite update loop.
 
+Built with native support for systemd using sd_notify() on Linux.  
+If your Linux system does not use systemd, a PID file will be written to `/run/gandi-ddns.pid` by default.
+
 ### Limitations
 
 Only works for IPv4.
+
+No included OpenRC service script.
 
 ## Usage & Configuration
 
