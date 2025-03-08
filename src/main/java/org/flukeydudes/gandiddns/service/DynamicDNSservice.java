@@ -32,7 +32,7 @@ public class DynamicDNSservice {
     private static final Logger logger = LoggerFactory.getLogger(DynamicDNSservice.class);
     private static final int MAX_DOMAIN_RESOLVE_USES = 2;
     private static final int MAX_TRIES = 3;
-    private static final int RETRY_DELAY = 10000;
+    private static final long RETRY_DELAY = 10000;
     private static final int DOMAIN_TTL = 300;
     private static AtomicInteger domainResolveUses = new AtomicInteger(MAX_DOMAIN_RESOLVE_USES);
     private static final String API_ENDPOINT = "https://api.gandi.net/v5/livedns/domains";
@@ -178,7 +178,7 @@ public class DynamicDNSservice {
      * 
      * @param <T>      the return type of the task.
      * @param task     the task to execute.
-     * @param taskName the name of the task being executed for loggin purposes.
+     * @param taskName the name of the task being executed for logging purposes.
      * @return the result of the task.
      * @throws Exception if the task fails after three attempts.
      */
@@ -191,7 +191,7 @@ public class DynamicDNSservice {
                 logger.error("{} attempt {}/{} failed.", taskName, attempt, MAX_TRIES, e);
                 if (attempt < MAX_TRIES) {
                     try {
-                        Thread.sleep(RETRY_DELAY);
+                        Thread.sleep(RETRY_DELAY * (1L << (attempt - 1)));
                     } catch (InterruptedException ie) {
                         logger.error("Retry thread sleep interrupted.", ie);
                         Thread.currentThread().interrupt();

@@ -124,16 +124,16 @@ public class GandiDynamicDNSApplication {
 		return properties;
 	}
 
-	public static class SystemdNotifySocket {
+	private static class SystemdNotifySocket {
 
-		public interface LibSystemd extends Library {
+		private interface LibSystemd extends Library {
 			LibSystemd INSTANCE = (LibSystemd) Native.load("systemd", LibSystemd.class);
 
 			// https://man7.org/linux/man-pages/man3/sd_notify.3.html
 			int sd_notify(int unset_environment, String state);
 		}
 
-		public static void ready() {
+		private static void ready() {
 			if (SYSTEMD) {
 				int result = LibSystemd.INSTANCE.sd_notify(0, "READY=1");
 				if (result < 0) {
@@ -143,7 +143,7 @@ public class GandiDynamicDNSApplication {
 			}
 		}
 
-		public static void reloading() {
+		private static void reloading() {
 			if (SYSTEMD) {
 				int result = LibSystemd.INSTANCE.sd_notify(0,
 						"RELOADING=1\nMONOTONIC_USEC=" + (System.nanoTime() / 1000));
@@ -154,7 +154,7 @@ public class GandiDynamicDNSApplication {
 			}
 		}
 
-		public static void stopping() {
+		private static void stopping() {
 			if (SYSTEMD) {
 				int result = LibSystemd.INSTANCE.sd_notify(0, "STOPPING=1");
 				if (result < 0) {
