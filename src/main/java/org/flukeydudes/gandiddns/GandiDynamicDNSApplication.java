@@ -85,17 +85,19 @@ public class GandiDynamicDNSApplication {
 
 		ApplicationContext context = SpringApplication.run(GandiDynamicDNSApplication.class, args);
 
-		Signal.handle(new Signal("HUP"), new SignalHandler() {
+		if (LINUX) {
+			Signal.handle(new Signal("HUP"), new SignalHandler() {
 
-			@Override
-			public void handle(Signal signal) {
-				logger.info("Received SIGHUP signal, reloading Properties.");
-				SystemdNotifySocket.reloading();
-				reloadProperties();
-				context.getBean(DynamicDNSservice.class).updateProperties();
-				SystemdNotifySocket.ready();
-			}
-		});
+				@Override
+				public void handle(Signal signal) {
+					logger.info("Received SIGHUP signal, reloading Properties.");
+					SystemdNotifySocket.reloading();
+					reloadProperties();
+					context.getBean(DynamicDNSservice.class).updateProperties();
+					SystemdNotifySocket.ready();
+				}
+			});
+		}
 
 		SystemdNotifySocket.ready();
 	}
