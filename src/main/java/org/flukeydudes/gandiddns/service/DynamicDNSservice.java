@@ -34,8 +34,8 @@ public class DynamicDNSservice {
     private static final int MAX_TRIES = 3;
     private static final long RETRY_DELAY = 10000;
     private static final int DOMAIN_TTL = 300;
-    private static AtomicInteger domainResolveUses = new AtomicInteger(MAX_DOMAIN_RESOLVE_USES);
     private static final String API_ENDPOINT = "https://api.gandi.net/v5/livedns/domains";
+    private AtomicInteger domainResolveUses = new AtomicInteger(MAX_DOMAIN_RESOLVE_USES);
     private final Properties properties;
     private String GANDI_API_KEY, DOMAIN_NAME, API_URL;
     private InetAddress wanIP, domainIP;
