@@ -1,4 +1,4 @@
-package org.flukeydudes.gandiddns.service;
+package io.github.andyt1523.gandiddns.service;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;

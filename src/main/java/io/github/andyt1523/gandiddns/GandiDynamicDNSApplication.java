@@ -1,4 +1,4 @@
-package org.flukeydudes.gandiddns;
+package io.github.andyt1523.gandiddns;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -18,14 +18,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import org.flukeydudes.gandiddns.service.DynamicDNSservice;
-
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 
+import io.github.andyt1523.gandiddns.service.DynamicDNSservice;
 import jakarta.annotation.PreDestroy;
 
 @SpringBootApplication

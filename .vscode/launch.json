@@ -5,7 +5,7 @@
             "name": "Gandi-DDNS",
             "request": "launch",
             "cwd": "${workspaceFolder}",
-            "mainClass": "org.flukeydudes.gandiddns.GandiDynamicDNSApplication",
+            "mainClass": "io.github.andyt1523.gandiddns.GandiDynamicDNSApplication",
             "projectName": "gandi-ddns",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
