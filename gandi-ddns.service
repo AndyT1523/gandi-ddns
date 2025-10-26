@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=notify-reload
-ExecStart=java -jar /opt/gandi-ddns/target/gandi-ddns-0.0.1-SNAPSHOT.jar
+ExecStart=java --enable-native-access=ALL-UNNAMED -jar /opt/gandi-ddns/target/gandi-ddns-0.0.1-SNAPSHOT.jar
 User=gandi-ddns
 Restart=always
 SuccessExitStatus=143
