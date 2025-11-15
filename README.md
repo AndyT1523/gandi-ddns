@@ -5,12 +5,11 @@ A simple DDNS client designed for Gandi's v5 API written in the Spring Boot fram
 ## Prerequisites
 
 * OpenJDK 21
-* Apache Maven
 
 ## Compiling
 
 ```bash
-mvn clean package
+./mvnw clean package
 ```
 
 ## About
@@ -40,11 +39,11 @@ The following properties are required:
 > gandi.apikey=API key  
 > target.hostname=full hostname
 
-The configuration was externalized so the API key can be updated without restarting the .jar via `systemctl reload gandi-ddns`
+The configuration was externalized so the API key can be updated without restarting the .jar with a `SIGHUP` via `systemctl reload gandi-ddns`
 
 ### Domain TTL
 
-In `DynamicDNSservice.java` adjust the following annotation `@Scheduled(fixedDelay = 180000)` to match the TTL in milliseconds.  
+In `DynamicDNSservice.java` adjust the following annotation `@Scheduled(fixedDelay = 300000)` to match the TTL in milliseconds.  
 Adjust the class variable `DOMAIN_TTL` to match TTL in seconds.
 
 ### Notes
@@ -54,34 +53,28 @@ See https://api.gandi.net/docs/livedns/#put-v5-livedns-domains-fqdn-records-rrse
 
 ## Installing
 
-1. Create service user account
+- Create the service user account
+- Change working directory to /opt
+- Clone the Git repository
+    - Set ownership of the repository to the service user
+- Copy the systemd service file (`gandi-ddns.service`)
+    - Set ownership of the systemd service file to root
+    - Reload systemd
+- Copy the update script to /opt (`updateGandi-ddns.sh`)
+   - Set ownership to the current user
+- Run the update script
 
 ```bash
-useradd gandi-ddns -r -m -s /sbin/nologin
-```
-
-2. Add systemd service file
-
-```bash
-cp gandi-ddns.service /etc/systemd/system
-```
-
-1. Reload systemd
-
-```bash
-systemctl daemon-reload
-```
-
-3. Add executable to /opt
-
-```bash
-mkdir -p /opt/gandi-ddns/target && cp gandi-ddns-0.0.1-SNAPSHOT.jar /opt/gandi-ddns/target
-```
-
-4. Enable and start service
-
-```bash
-systemctl enable --now gandi-ddns.service
+sudo useradd gandi-ddns -r -m -s /sbin/nologin
+cd /opt
+sudo git clone https://github.com/AndyT1523/gandi-ddns
+sudo chown -R gandi-ddns:gandi-ddns gandi-ddns
+sudo cp gandi-ddns/gandi-ddns.service /etc/systemd/system
+sudo chown root:root /etc/systemd/system/gandi-ddns.service
+sudo systemctl daemon-reload
+sudo cp gandi-ddns/updateGandi-ddns.sh /opt
+sudo chown $USER:$USER /opt/updateGandi-ddns.sh
+./updateGandi-ddns.sh
 ```
 
 ## Updating
