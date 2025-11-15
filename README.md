@@ -57,7 +57,7 @@ See https://api.gandi.net/docs/livedns/#put-v5-livedns-domains-fqdn-records-rrse
 1. Create service user account
 
 ```bash
-useradd gandi-ddns -r -s /sbin/nologin
+useradd gandi-ddns -r -m -s /sbin/nologin
 ```
 
 2. Add systemd service file
@@ -75,7 +75,7 @@ systemctl daemon-reload
 3. Add executable to /opt
 
 ```bash
-mkdir -p /opt/gandi-ddns && cp gandi-ddns-0.0.1-SNAPSHOT.jar /opt/gandi-ddns
+mkdir -p /opt/gandi-ddns/target && cp gandi-ddns-0.0.1-SNAPSHOT.jar /opt/gandi-ddns/target
 ```
 
 4. Enable and start service
@@ -83,6 +83,10 @@ mkdir -p /opt/gandi-ddns && cp gandi-ddns-0.0.1-SNAPSHOT.jar /opt/gandi-ddns
 ```bash
 systemctl enable --now gandi-ddns.service
 ```
+
+## Updating
+
+See `updateGandi-ddns.sh` for details.
 
 ## License
 
