@@ -6,7 +6,9 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.StringUtils;
@@ -34,8 +36,8 @@ public class DynamicDNSservice {
     private static final long RETRY_DELAY = 10000;
     private static final int DOMAIN_TTL = 300;
     private static final String API_ENDPOINT = "https://api.gandi.net/v5/livedns/domains";
-    private AtomicInteger domainResolveUses = new AtomicInteger(MAX_DOMAIN_RESOLVE_USES);
     private final Properties properties;
+    private AtomicInteger domainResolveUses = new AtomicInteger(MAX_DOMAIN_RESOLVE_USES);
     private String GANDI_API_KEY, DOMAIN_NAME, API_URL;
     private InetAddress wanIP, domainIP;
     private CompletableFuture<InetAddress> futureWanIP;
@@ -47,6 +49,13 @@ public class DynamicDNSservice {
     }
 
     public void updateProperties() {
+
+        if (StringUtils.isBlank(properties.getProperty("gandi.apikey"))
+                || StringUtils.isBlank(properties.getProperty("target.hostname"))) {
+            throw new RuntimeException(
+                    "Application properties file is missing gandi.apikey and target.hostname they must be set!");
+        }
+
         GANDI_API_KEY = properties.getProperty("gandi.apikey");
         DOMAIN_NAME = properties.getProperty("target.hostname");
 
@@ -69,16 +78,11 @@ public class DynamicDNSservice {
 
     private void run() {
 
-        if (StringUtils.isBlank(GANDI_API_KEY) || StringUtils.isBlank(DOMAIN_NAME)) {
-            logger.error("Gandi API key and/or domain name not set. Aborting run...");
-            return;
-        }
-
         futureWanIP = CompletableFuture.supplyAsync(() -> {
             try {
                 return tryThrice(this::getWanIP, "getWanIP()");
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new CompletionException(e);
             }
         });
 
@@ -95,8 +99,17 @@ public class DynamicDNSservice {
 
         try {
             wanIP = futureWanIP.join();
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
+        } catch (CancellationException e) {
+            logger.warn("WAN IP lookup task was cancelled, aborting run...\"", e);
+            return;
+
+        } catch (CompletionException e) {
+            Throwable cause = e.getCause();
+            if (cause != null) {
+                logger.error("Failed to lookup WAN IP: {}, aborting run...\"", cause.getMessage(), cause);
+            } else {
+                logger.error("Failed to lookup WAN IP (CompletionException with no cause), aborting run...\"", e);
+            }
             return;
         }
 
@@ -114,12 +127,13 @@ public class DynamicDNSservice {
                 return;
             }
 
+            // Invalidate cached domain IP after successful update
+            domainResolveUses.set(0);
             try {
                 domainIP = InetAddress.getByAddress(wanIP.getAddress());
             } catch (UnknownHostException e) {
-                logger.error("Failed to update cached domain IP after successful API call.", e);
+                logger.error("Failed to invalidate cached domain IP after successful API call.", e);
             }
-            domainResolveUses.set(0);
         }
     }
 
