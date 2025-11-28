@@ -170,7 +170,7 @@ public class DynamicDNSservice {
         logger.info("Status code: " + response.getStatusCode() + " Response: " + (response.getBody() != null
                 ? response.getBody()
                 : "No HTTP body!"));
-        logger.info("Gandi API call successful. IP address updated to {}. " + response, wanIP.getHostAddress());
+        logger.info("Gandi API call successful. IP address updated to {}.", wanIP.getHostAddress());
 
         return null;
     }
