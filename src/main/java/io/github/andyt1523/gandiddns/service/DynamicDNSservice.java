@@ -15,17 +15,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 @Service
 public class DynamicDNSservice {
@@ -41,10 +38,13 @@ public class DynamicDNSservice {
     private String GANDI_API_KEY, DOMAIN_NAME, API_URL;
     private InetAddress wanIP, domainIP;
     private CompletableFuture<InetAddress> futureWanIP;
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private ObjectMapper objectMapper;
+    private RestClient restClient;
 
-    public DynamicDNSservice(Properties properties) {
+    public DynamicDNSservice(Properties properties, ObjectMapper objectMapper, RestClient restClient) {
         this.properties = properties;
+        this.objectMapper = objectMapper;
+        this.restClient = restClient;
         updateProperties();
     }
 
@@ -108,7 +108,8 @@ public class DynamicDNSservice {
             if (cause != null) {
                 logger.error("Failed to lookup WAN IP: {}, aborting run...\"", cause.getMessage(), cause);
             } else {
-                logger.error("Failed to lookup WAN IP (CompletionException with no cause), aborting run...\"", e);
+                logger.error("Failed to lookup WAN IP (CompletionException with no cause), aborting run...\"",
+                        e.getMessage());
             }
             return;
         }
@@ -121,7 +122,7 @@ public class DynamicDNSservice {
 
             logger.info("WAN IP and {} do not match. Updating DNS...", DOMAIN_NAME);
             try {
-                tryThrice(this::putToGandi, "postToGandi()");
+                tryThrice(this::putToGandi, "putToGandi()");
             } catch (Exception e) {
                 logger.error(e.getMessage());
                 return;
@@ -138,8 +139,11 @@ public class DynamicDNSservice {
     }
 
     private InetAddress getWanIP() throws Exception {
-        return Inet4Address.getByName(new RestTemplate()
-                .getForEntity("https://api.ipify.org", String.class).getBody());
+        return Inet4Address.getByName(restClient
+                .get()
+                .uri("https://api.ipify.org")
+                .retrieve()
+                .body(String.class));
     }
 
     /**
@@ -149,40 +153,26 @@ public class DynamicDNSservice {
      * @return null if the request is successful.
      * @throws Exception if the request fails.
      */
-    @SuppressWarnings("null")
     private Void putToGandi() throws Exception {
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + GANDI_API_KEY);
-        headers.set("Content-Type", "application/json");
 
         ObjectNode body = objectMapper.createObjectNode();
         body.set("rrset_values", objectMapper.createArrayNode().add(wanIP.getHostAddress()));
         body.put("rrset_ttl", DOMAIN_TTL);
 
-        ResponseEntity<JsonNode> response;
-        try {
-            response = new RestTemplate().exchange(
-                    API_URL, HttpMethod.PUT, new HttpEntity<>(body, headers), JsonNode.class);
-        } catch (Exception e) {
-            throw e;
-        }
+        ResponseEntity<JsonNode> response = restClient.put()
+                .uri(API_URL)
+                .header("Authorization", "Bearer " + GANDI_API_KEY)
+                .header("Content-Type", "application/json")
+                .body(body)
+                .retrieve()
+                .toEntity(JsonNode.class);
 
-        if (response.getStatusCode().is2xxSuccessful()) {
-            logger.info("Gandi API call successful. IP address updated to {}.", wanIP.getHostAddress());
+        logger.info("Status code: " + response.getStatusCode() + " Response: " + (response.getBody() != null
+                ? response.getBody()
+                : "No HTTP body!"));
+        logger.info("Gandi API call successful. IP address updated to {}. " + response, wanIP.getHostAddress());
 
-            logger.info("Status code: " + response.getStatusCode() + "\nResponse: " + (response.getBody() != null
-                    ? response.getBody().toPrettyString()
-                    : "No HTTP body!"));
-
-            return null;
-
-        } else {
-            throw new Exception("Status code: " + response.getStatusCode() + "\nResponse: "
-                    + (response.getBody() != null
-                            ? response.getBody().toPrettyString()
-                            : "No HTTP body!"));
-        }
+        return null;
     }
 
     /**
@@ -201,7 +191,7 @@ public class DynamicDNSservice {
             try {
                 return task.call();
             } catch (Exception e) {
-                logger.error("{} attempt {}/{} failed.", taskName, attempt, MAX_TRIES, e);
+                logger.error("{} attempt {}/{} failed: " + e.getMessage(), taskName, attempt, MAX_TRIES);
                 if (attempt < MAX_TRIES) {
                     try {
                         Thread.sleep(RETRY_DELAY * (1L << (attempt - 1)));

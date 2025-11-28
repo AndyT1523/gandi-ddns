@@ -17,6 +17,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.web.client.RestClient;
 
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
@@ -123,6 +124,11 @@ public class GandiDynamicDNSApplication {
 	@Primary
 	public Properties appProperties() {
 		return properties;
+	}
+
+	@Bean
+	public RestClient restClient() {
+		return RestClient.builder().build();
 	}
 
 	private static class SystemdNotifySocket {
