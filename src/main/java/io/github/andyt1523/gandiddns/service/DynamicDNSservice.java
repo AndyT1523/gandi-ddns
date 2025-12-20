@@ -155,15 +155,15 @@ public class DynamicDNSservice {
      */
     private Void putToGandi() throws Exception {
 
-        ObjectNode body = objectMapper.createObjectNode();
-        body.set("rrset_values", objectMapper.createArrayNode().add(wanIP.getHostAddress()));
-        body.put("rrset_ttl", DOMAIN_TTL);
+        ObjectNode bodyJson = objectMapper.createObjectNode();
+        bodyJson.set("rrset_values", objectMapper.createArrayNode().add(wanIP.getHostAddress()));
+        bodyJson.put("rrset_ttl", DOMAIN_TTL);
 
         ResponseEntity<JsonNode> response = restClient.put()
                 .uri(API_URL)
                 .header("Authorization", "Bearer " + GANDI_API_KEY)
                 .header("Content-Type", "application/json")
-                .body(body)
+                .body(bodyJson)
                 .retrieve()
                 .toEntity(JsonNode.class);
 
