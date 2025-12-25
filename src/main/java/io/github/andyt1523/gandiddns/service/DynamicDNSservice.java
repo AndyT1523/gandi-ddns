@@ -28,7 +28,7 @@ public class DynamicDNSservice {
     private static final Logger logger = LoggerFactory.getLogger(DynamicDNSservice.class);
     private static final int MAX_DOMAIN_RESOLVE_USES = 2;
     private static final int MAX_TRIES = 3;
-    private static final long RETRY_DELAY = 10000;
+    private static final long RETRY_DELAY = 5000;
     private static final int DOMAIN_TTL = 300;
     private static final String BASE_API_URL = "https://api.gandi.net/v5/livedns/domains";
     private final Supplier<Properties> propertiesSupplier;
