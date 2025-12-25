@@ -10,6 +10,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -33,7 +34,7 @@ public class DynamicDNSservice {
     private static final long RETRY_DELAY = 10000;
     private static final int DOMAIN_TTL = 300;
     private static final String API_ENDPOINT = "https://api.gandi.net/v5/livedns/domains";
-    private final Properties properties;
+    private final Supplier<Properties> propertiesSupplier;
     private AtomicInteger domainResolveUses = new AtomicInteger(MAX_DOMAIN_RESOLVE_USES);
     private String GANDI_API_KEY, DOMAIN_NAME, API_URL;
     private InetAddress wanIP, domainIP;
@@ -41,14 +42,17 @@ public class DynamicDNSservice {
     private ObjectMapper objectMapper;
     private RestClient restClient;
 
-    public DynamicDNSservice(Properties properties, ObjectMapper objectMapper, RestClient restClient) {
-        this.properties = properties;
+    public DynamicDNSservice(Supplier<Properties> propertiesSupplier, ObjectMapper objectMapper,
+            RestClient restClient) {
+        this.propertiesSupplier = propertiesSupplier;
         this.objectMapper = objectMapper;
         this.restClient = restClient;
         updateProperties();
     }
 
-    public void updateProperties() {
+    public synchronized void updateProperties() {
+
+        Properties properties = propertiesSupplier.get();
 
         if (StringUtils.isBlank(properties.getProperty("gandi.apikey"))
                 || StringUtils.isBlank(properties.getProperty("target.hostname"))) {

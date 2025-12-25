@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
+import java.util.function.Supplier;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -15,7 +16,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestClient;
 
@@ -35,8 +35,8 @@ public class GandiDynamicDNSApplication {
 	private static final boolean LINUX, SYSTEMD;
 	private static final String PATH_TO_PROPERTIES;
 	private static final String PID_FILE_PATH = "/run/gandi-ddns.pid";
+	private static volatile Properties properties;
 	private static Logger logger = LoggerFactory.getLogger(GandiDynamicDNSApplication.class);
-	private static volatile Properties properties = new Properties();
 
 	/**
 	 * Static block to determine if the application is running on a linux system
@@ -109,21 +109,19 @@ public class GandiDynamicDNSApplication {
 	}
 
 	private static synchronized void reloadProperties() {
-		synchronized (properties) {
-			try {
-				properties.clear();
-				properties.load(Files.newBufferedReader(Paths.get(PATH_TO_PROPERTIES)));
-			} catch (IOException e) {
-				logger.error("Failed to load Properties from {}. Halting!", PATH_TO_PROPERTIES, e);
-				System.exit(1);
-			}
+		try {
+			Properties newProperties = new Properties();
+			newProperties.load(Files.newBufferedReader(Paths.get(PATH_TO_PROPERTIES)));
+			properties = newProperties;
+		} catch (IOException e) {
+			logger.error("Failed to load Properties from {}. Halting!", PATH_TO_PROPERTIES, e);
+			System.exit(1);
 		}
 	}
 
 	@Bean
-	@Primary
-	public Properties appProperties() {
-		return properties;
+	public Supplier<Properties> appPropertiesSupplier() {
+		return () -> properties;
 	}
 
 	@Bean
