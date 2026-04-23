@@ -58,7 +58,7 @@ public class GandiDynamicDNSApplication {
 						new String(new ProcessBuilder("ps", "--no-headers", "-o", "comm", "1")
 								.start()
 								.getInputStream()
-								.readAllBytes(), StandardCharsets.UTF_8).trim());
+								.readAllBytes(), StandardCharsets.UTF_8).strip());
 			} catch (IOException e) {
 				logger.info("Failed to detect systemd, writing PID file.");
 			}
