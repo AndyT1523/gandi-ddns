@@ -65,7 +65,7 @@ See https://api.gandi.net/docs/livedns/#put-v5-livedns-domains-fqdn-records-rrse
 - Run the update script
 
 ```bash
-sudo useradd gandi-ddns -r -m -s /sbin/nologin
+sudo useradd gandi-ddns -r -M -s /sbin/nologin
 cd /opt
 sudo git clone https://github.com/AndyT1523/gandi-ddns
 sudo chown -R gandi-ddns:gandi-ddns gandi-ddns
